@@ -1,0 +1,117 @@
+imgPath=fullfile('D:','Matlab\');
+imgType='*.png';
+images=dir(fullfile(imgPath, imgType));
+%Seq{length(images)};
+for idx=1:length(images)
+    Seq{idx}=imread([imgPath images(idx).name]);
+
+
+char1=cell2mat(Seq(idx));
+%char1=imread('urduchar1.png');
+char1BW=im2bw(char1,0.4);
+check=char1BW;
+%figure;
+%imshow(char1BW);
+[I,J]=find(char1BW==0);
+%figure;
+%plot(J,I);
+x1=1;
+if(min(I)-1>1)
+    x1=min(I)-1;
+end
+x2=1;
+if(min(I)+1<length(I))
+    x2=max(I)+1;
+end
+y1=1;
+if(min(J)-1>1)
+    y1=min(J)-1;
+end
+y2=1;
+if(min(J)+1<length(J))
+    y2=max(J)+1;
+end
+meanDiff=floor(abs(((x2-x1)-(y2-y1))/2));
+%meanDiff=floor(abs((x2-x1) - (y2-y1))/2);
+%check2=char1BW;
+
+if (x2-x1>y2-y1)
+    char1BW([1:x1,x2:end],:)=[];
+    char1BW(:,[1:(y1-meanDiff), (y2+meanDiff):end])=[];
+elseif(x2-x1<y2-y1)
+    char1BW([1:(x1-meanDiff),(x2+meanDiff):end],:)=[];
+    char1BW(:,[1:y1,y2:end])=[];
+else
+    char1BW([1:x1,x2:end],:)=[];
+    char1BW(:,[1:y1,y2:end])=[];
+end
+
+%disp(idx);
+
+%imshow(char1BW);
+char1Resize=imresize(char1BW,[20 20]);
+    
+imshow(char1Resize);
+sizeChar1=size(char1Resize);
+char1Row=reshape(char1Resize',1,sizeChar1(1)*sizeChar1(2));
+chrow{idx}=char1Row;
+end
+%Z={};
+X=[];
+for i=1:length(images)
+    var=cell2mat(chrow(i));
+    varz=var';
+    X=horzcat(X,varz);
+end
+
+
+
+T=eye(15);
+T1=eye(15);
+%T2=eye(15);
+T=horzcat(T,T);
+T=horzcat(T,T1);
+%T=horzcat(T,T);
+
+
+%[V,T]=prprob;
+setdemorandstream(pi);
+net1=feedforwardnet(14);
+
+view(net1);
+net1.divideFcn='';
+net1=train(net1,X,T,nnMATLAB);
+
+X1=X(1:400,1:15);
+
+numNoise=30;
+Xn=min(max(repmat(X1,1,numNoise)+randn(400,15*numNoise)*0.2,0),1);
+Tn = repmat(T1,1,numNoise);
+
+figure
+plotchar(Xn(:,1));
+
+net2=feedforwardnet(14);
+net2=train(net2,Xn,Tn,nnMATLAB);
+
+
+
+noiseLevels = 0:0.05:1;
+numLevels=length(noiseLevels);
+percError1=zeros(1,numLevels);
+percError2=zeros(1,numLevels);
+for i=1:numLevels
+     Xtest=min(max(repmat(X1,1,numNoise)+randn(400,15*numNoise)*noiseLevels(i),0),1); 
+     Y1=net1(Xtest);
+     percError1(i)=sum(sum(abs(Tn-compet(Y1))))/(15*numNoise*2);
+     Y2=net2(Xtest);
+     percError2(i)=sum(sum(abs(Tn-compet(Y2))))/(15*numNoise*2);
+     
+end
+
+figure
+plot(noiseLevels,percError1*100,'--',noiseLevels,percError2*100);
+title('Percentage of Recognition Errors');
+xlabel('Noise Level');
+ylabel('Errors');
+legend('Network 1','Network 2','Location','NorthWest');

@@ -1,0 +1,6 @@
+a.
+	This results in the increase time taken to reach the optimal approximated image.
+
+b.
+	1) not much of a difference 
+	2) can increase the time taken due to moving away from target image because of mutation.
